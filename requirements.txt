@@ -8,4 +8,4 @@ folium==0.20.0
 matplotlib==3.10.3
 pandas==2.3.0
 streamlit-folium==0.25.0
-plotly==5.18.1
+plotly==5.16.1
