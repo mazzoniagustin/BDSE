@@ -6,6 +6,14 @@
 - Libré, Nicolas
 - Fernandez, Lucas
 
+##  Deploy de la App:
+
+  Accedé a la app online:
+**[https://mazzoniagustin-bdse-app.streamlit.app](https://mazzoniagustin-bdse-app.streamlit.app)**
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://mazzoniagustin-bdse-app.streamlit.app)
+
+
 # Instrucciones para ejecutar el procesamiento de datos:
 
 ( Preferentemente se recomienda la instalacion de un entorno virtual, siendo este optimo para aislar la instalacion de las bibliotecas y paquetes necesarios para correr este proyecto. )
@@ -26,12 +34,11 @@ Abrir la terminal desde el editor de texto que prefiera utilizar para correr los
 
 Para correr las funciones del programa visualize el archivo individual.ipynb y hogar.ipynb. Dentro de cada uno vera el desarrollo del procesamiento de los datasets.
 
-### Visualizacion de la aplicacion : 
+### Visualizacion de la aplicacion: 
 
 ( Con el entorno virtual activado, corremos los siguientes comandos. )
 
 1. streamlit run streamlit/B_D_S_E.py  |  Lanza una apliacion web en una direccion local.
 
 2. venv/Scripts/deactivate O venv/bin/deactivate  |  Desactiva el entorno virtual. ( Ejecutar una vez que termino de realizar pruebas en el proyecto. )
-
 
