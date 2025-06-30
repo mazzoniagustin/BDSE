@@ -9,9 +9,9 @@
 ##  Deploy de la App:
 
   Accedé a la app online:
-**[https://tkmty5sws4x7jypp78ppq9.streamlit.app](https://tkmty5sws4x7jypp78ppq9.streamlit.app)** 
+**[https://bdse-indec.streamlit.app/](https://bdse-indec.streamlit.app/)** 
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tkmty5sws4x7jypp78ppq9.streamlit.app)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://bdse-indec.streamlit.app/)
 
 
 # Instrucciones para ejecutar el procesamiento de datos:
