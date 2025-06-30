@@ -9,9 +9,9 @@
 ##  Deploy de la App:
 
   Accedé a la app online:
-**[https://mazzoniagustin-bdse-app.streamlit.app](https://mazzoniagustin-bdse-app.streamlit.app)**
+**[https://tkmty5sws4x7jypp78ppq9.streamlit.app](https://tkmty5sws4x7jypp78ppq9.streamlit.app)** 
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://mazzoniagustin-bdse-app.streamlit.app)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tkmty5sws4x7jypp78ppq9.streamlit.app)
 
 
 # Instrucciones para ejecutar el procesamiento de datos:
