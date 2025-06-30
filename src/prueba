@@ -1,0 +1,362 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from constantes import *
+from funcionalidad import aglo_dict
+
+def edad_promedio_por_aglomerado(archivo_csv):
+    """
+    Calcula y grafica la edad promedio por aglomerado para el último año y trimestre cargados.
+
+    Parameters
+    ----------
+    archivo_csv : str
+        Ruta al archivo CSV con datos individuales procesados.
+    Returns
+    -------
+    None
+        Muestra en consola la edad promedio por aglomerado, con su respectivo grafico.
+    """
+    try:
+        datos_personas = pd.read_csv(archivo_csv, delimiter=';')
+
+        columnas_necesarias = {'ANO4', 'TRIMESTRE', 'CH06', 'AGLOMERADO', 'PONDERA'}
+        if not columnas_necesarias.issubset(datos_personas.columns):
+            print("Faltan columnas necesarias para el análisis.")
+            return
+
+        # Conversión de tipos
+        datos_personas['ANO4'] = pd.to_numeric(datos_personas['ANO4'], errors='coerce')
+        datos_personas['TRIMESTRE'] = pd.to_numeric(datos_personas['TRIMESTRE'], errors='coerce')
+        datos_personas['CH06'] = pd.to_numeric(datos_personas['CH06'], errors='coerce')
+        datos_personas['PONDERA'] = pd.to_numeric(datos_personas['PONDERA'], errors='coerce')
+        datos_personas['AGLOMERADO'] = datos_personas['AGLOMERADO'].astype(str)
+
+        # Último año y trimestre
+        anio_max = datos_personas['ANO4'].max()
+        trimestre_max = datos_personas[datos_personas['ANO4'] == anio_max]['TRIMESTRE'].max()
+
+        datos_filtrados = datos_personas[
+            (datos_personas['ANO4'] == anio_max) & 
+            (datos_personas['TRIMESTRE'] == trimestre_max)
+        ]
+
+        # Cálculo de edad promedio
+        edades = (
+            datos_filtrados
+            .assign(producto=datos_filtrados['CH06'] * datos_filtrados['PONDERA'])
+            .groupby('AGLOMERADO')
+            .agg(suma=('producto', 'sum'), suma_pesos=('PONDERA', 'sum'))
+        )
+        edades['edad_prom'] = edades['suma'] / edades['suma_pesos']
+        edades = edades.sort_values(by='edad_prom')
+
+
+        # Mostrar en consola
+
+        print('\nEdad promedio por aglomerado:')
+        print(edades['edad_prom'])
+
+        # Preparar gráfico
+        edades.index = edades.index.map(lambda x: aglo_dict().get(x, f'Aglomerado {x}'))
+        edades['edad_prom'].plot(kind='barh', figsize=(10, 8), color='cornflowerblue')
+        plt.title(f'Edad promedio por aglomerado (Año {anio_max}, Trimestre {trimestre_max})')
+        plt.xlabel('Edad promedio')
+        plt.ylabel('Aglomerado')
+        plt.tight_layout()
+        plt.show()
+
+    except FileNotFoundError:
+        print('No se encontró el archivo especificado.')
+    except TypeError:
+        print('Error en los parámetros de llamada de la función.')
+
+materiales_piso = {
+    "1": "Mosaico, baldosa, madera, cerámica, alfombra",
+    "2": "Cemento, ladrillo fijo",
+    "3": "Ladrillo suelto, tierra",
+}
+
+def material_predominante_por_aglomerado(archivo_csv, anio_filtrado=None, trimestre_filtrado=None): # hacer año y trimestre
+    """
+    Determina el material de piso predominante por aglomerado, basado en hogares únicos
+    y filtrado por año y trimestre si se especifican.
+
+    Parameters
+    ----------
+    archivo_csv : str
+        Ruta al archivo CSV con datos de hogares.
+    anio_filtrado : int, optional
+        Año específico para filtrar los registros.
+    trimestre_filtrado : int, optional
+        Trimestre específico dentro del año filtrado.
+
+    Returns
+    -------
+    None
+        Muestra un gráfico de barras por aglomerado con los materiales predominantes.
+    """
+    
+    materiales_piso = {
+    '1': 'Mosaico, baldosa, madera, cerámica, alfombra',
+    '2': 'Cemento, ladrillo fijo',
+    '3': 'Ladrillo suelto, tierra',
+    }
+    
+    try:
+        
+        datos_hogares = pd.read_csv(archivo_csv, delimiter=';')
+
+        columnas_requeridas = {'ANO4', 'TRIMESTRE','AGLOMERADO', 'IV3','CODUSU'}
+        if not columnas_requeridas.issubset(datos_hogares.columns):
+            print('Faltan columnas necesarias para el análisis.')
+            return
+    
+        datos_hogares['ANO4'] = pd.to_numeric(datos_hogares['ANO4'], errors='coerce')
+        datos_hogares['TRIMESTRE'] = pd.to_numeric(datos_hogares['TRIMESTRE'], errors='coerce')
+        datos_hogares['AGLOMERADO'] = datos_hogares['AGLOMERADO'].astype(str)
+        datos_hogares['IV3'] = datos_hogares['IV3'].astype(str)
+        datos_hogares['CODUSU'] = datos_hogares['CODUSU'].astype(str)
+
+        if anio_filtrado is not None:
+            if anio_filtrado not in datos_hogares['ANO4'].unique():
+                print(f'El año {anio_filtrado} no se encuentra en los datos.')
+                return
+            datos_hogares = datos_hogares[datos_hogares['ANO4'] == anio_filtrado]
+            
+        if trimestre_filtrado is not None:
+            if trimestre_filtrado not in datos_hogares['TRIMESTRE'].unique():
+                print(f'El trimestre {trimestre_filtrado} no se encuentra en los datos.')
+                return
+            datos_hogares = datos_hogares[datos_hogares['TRIMESTRE'] == trimestre_filtrado]
+
+        datos_hogares = datos_hogares.drop_duplicates(subset='CODUSU') # Se eliminan duplicados
+
+        datos_hogares['material_piso'] = datos_hogares['IV3'].map(materiales_piso)
+        datos_hogares = datos_hogares.dropna(subset=['material_piso'])
+
+        conteos = datos_hogares.groupby(['AGLOMERADO', 'material_piso']).size().reset_index(name='cantidad')
+        conteos['AGLOMERADO'] = conteos['AGLOMERADO'].map(lambda x: aglo_dict().get(x, f"Aglomerado {x}"))
+
+        tabla_grafico = conteos.pivot(index='AGLOMERADO', columns='material_piso', values='cantidad').fillna(0)
+        tabla_grafico.sort_index().plot.barh(figsize=(12, 8))
+        plt.title(f'Cantidad de viviendas por material del piso y aglomerado' + (f' - Año {anio_filtrado}' if anio_filtrado else ''))
+        plt.xlabel('Cantidad de viviendas')
+        plt.ylabel('Aglomerado')
+        plt.legend(title='Material del piso')
+        plt.tight_layout()
+        plt.show()
+        
+    except FileNotFoundError:
+        print('No se encontró el archivo especificado.')
+    except TypeError:
+        print('Error en los parametros de llamada de la función.')
+
+
+
+## 1.5.2 Evolución del desempleo
+
+
+def calcular_tasa_desempleo(datos_empleo):
+    """
+    Calcula la tasa de desempleo ponderada para un conjunto de registros.
+
+    Parameters
+    ----------
+    datos_empleo : pd.DataFrame
+        Subconjunto de registros con las columnas 'PONDERA' y 'CONDICION_LABORAL'.
+
+    Returns
+    -------
+    float
+        Tasa de desempleo expresada en porcentaje.
+    """
+    
+    ocupados = datos_empleo[datos_empleo['CONDICION_LABORAL'].str.startswith('Ocupado')]['PONDERA'].sum()
+    desocupados = datos_empleo[datos_empleo['CONDICION_LABORAL'] == 'Desocupado.']['PONDERA'].sum()
+    total = ocupados + desocupados
+    return (desocupados / total) * 100 if total > 0 else 0
+
+def evolucion_desempleo(archivo_csv, aglomerado=None):
+    """
+    Grafica la evolución de la tasa de desempleo a lo largo del tiempo,
+    ya sea a nivel país o filtrado por un aglomerado en particular.
+
+    Parameters
+    ----------
+    archivo_csv : str
+        Ruta al archivo CSV con datos individuales procesados.
+    aglomerado : str, optional
+        Código del aglomerado a filtrar. Si es None, considera todo el país.
+
+    Returns
+    -------
+    None
+        Muestra un gráfico con la evolución de la tasa de desempleo.
+    """
+    try:
+        datos_personas = pd.read_csv(archivo_csv, delimiter=';')
+
+        columnas = {'ANO4', 'TRIMESTRE', 'PONDERA', 'CONDICION_LABORAL', 'AGLOMERADO'}
+        if not columnas.issubset(datos_personas.columns):
+            print("Faltan columnas necesarias para calcular desempleo.")
+            return
+
+        datos_personas['ANO4'] = pd.to_numeric(datos_personas['ANO4'], errors='coerce')
+        datos_personas['TRIMESTRE'] = pd.to_numeric(datos_personas['TRIMESTRE'], errors='coerce')
+        datos_personas['PONDERA'] = pd.to_numeric(datos_personas['PONDERA'], errors='coerce')
+        datos_personas['AGLOMERADO'] = datos_personas['AGLOMERADO'].astype(str)
+        datos_personas['CONDICION_LABORAL'] = datos_personas['CONDICION_LABORAL'].astype(str)
+
+        if aglomerado:
+            datos_personas = datos_personas[datos_personas['AGLOMERADO'] == aglomerado]
+            nombre = aglo_dict().get(aglomerado, aglomerado)
+        else:
+            nombre = 'Total País'
+
+        datos_personas['PERIODO'] = datos_personas['ANO4'].astype(str) + 'TRIM' + datos_personas['TRIMESTRE'].astype(str)
+        resumen = datos_personas.groupby('PERIODO', group_keys=False).apply(calcular_tasa_desempleo).reset_index(name='Tasa')
+
+        plt.figure(figsize=(12, 6))
+        plt.plot(resumen['PERIODO'], resumen['Tasa'], marker='o', linestyle='-', color='tomato')
+        plt.title(f'Tasa de desempleo en el tiempo - {nombre}')
+        plt.ylabel('Tasa (%)')
+        plt.xlabel('Periodo (Año + Trimestre)')
+        plt.grid(True)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+        
+    except FileNotFoundError:
+        print('No se encontró el archivo especificado.')
+    except TypeError:
+        print('Error en los parametros de llamada de la función.')
+
+## 1.6.2 Nivel educativo por grupo etario 
+
+import pandas as pd
+import matplotlib as plt
+
+
+def nivel_educativo_mas_comun_por_grupo(archivo_csv, grupos_etarios=None):
+    """
+    Muestra la distribución proporcional del nivel educativo más frecuente por grupo etario.
+
+    Parameters
+    ----------
+    archivo_csv : str
+        Ruta al archivo CSV con datos individuales procesados.
+    grupos_etarios : list of tuple, optional
+        Lista de tuplas con los rangos etarios a evaluar, por defecto se usan:
+        [(20, 30), (30, 40), (40, 50), (50, 60), (60, 120)].
+
+    Returns
+    -------
+    None
+        Muestra un gráfico con las proporciones por grupo etario y nivel educativo.
+    """
+    try:
+        datos_personas = pd.read_csv(archivo_csv, delimiter=';')
+
+        columnas = {'CH06', 'NIVEL_ED_str', 'PONDERA'}
+        if not columnas.issubset(datos_personas.columns):
+            print("Faltan columnas para este análisis.")
+            return
+
+        datos_personas['EDAD'] = pd.to_numeric(datos_personas['CH06'], errors='coerce')
+        datos_personas['PONDERA'] = pd.to_numeric(datos_personas['PONDERA'], errors='coerce')
+        datos_personas['NIVEL_ED'] = datos_personas['NIVEL_ED_str'].fillna("Sin información.")
+
+        rangos = grupos_etarios or [(20, 30), (30, 40), (40, 50), (50, 60), (60, 120)]
+        datos_personas['GRUPO_ETARIO'] = pd.NA
+
+        for inf, sup in rangos:
+            limite = f'{inf}-{sup}' # recorre la tupla y escribe los limites
+            cumple = (datos_personas['EDAD'] >= inf) & (datos_personas['EDAD'] < sup) # filtra con para seleccionar filas donde la edad este en el rango
+            datos_personas.loc[cumple, 'GRUPO_ETARIO'] = limite # asigna las filas a la columna grupo_etario
+
+        datos_personas = datos_personas.dropna(subset=['GRUPO_ETARIO'])
+
+        conteos = (
+            datos_personas.groupby(['GRUPO_ETARIO', 'NIVEL_ED'])['PONDERA']
+            .sum()
+            .reset_index(name='ponderado')
+        )
+
+        tabla = conteos.pivot(index='GRUPO_ETARIO', columns='NIVEL_ED', values='ponderado').fillna(0)
+        proporciones = tabla.div(tabla.sum(axis=1), axis=0)
+
+        proporciones.plot.bar(stacked=True, figsize=(12, 7), colormap='tab20')
+        plt.title('Distribución del nivel educativo por grupo etario')
+        plt.xlabel('Grupo Etario')
+        plt.ylabel('Proporción')
+        plt.xticks(rotation=45)
+        plt.legend(title='Nivel Educativo', bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        plt.show()
+    
+    except FileNotFoundError:
+        print('No se encontró el archivo especificado.')
+    except TypeError:
+        print('Error en los parametros de llamada de la función.')
+
+
+    try:
+        df = pd.read_csv(PROCESSED_DATA_HOGAR, delimiter=';')
+
+        # Verificamos columnas requeridas
+        columnas = {'ANO4', 'TRIMESTRE','AGLOMERADO', 'IV3','CODUSU'}
+        if not columnas.issubset(df.columns):
+            st.warning('Faltan columnas necesarias para el análisis.')
+            return
+
+        df['ANO4'] = pd.to_numeric(df['ANO4'], errors='coerce')
+        df['TRIMESTRE'] = pd.to_numeric(df['TRIMESTRE'], errors='coerce')
+        df['AGLOMERADO'] = df['AGLOMERADO'].astype(str)
+        df['IV3'] = df['IV3'].astype(str)
+        df['CODUSU'] = df['CODUSU'].astype(str)
+        df['material_piso'] = df['IV3'].map(materiales_piso)
+        df = df.dropna(subset=['material_piso'])
+
+        df = df.drop_duplicates(subset='CODUSU')
+
+        if option != "Todos":
+            selec_anio = int(option)
+            trimestres = sorted(df[df['ANO4'] == selec_anio]['TRIMESTRE'].dropna().unique(), reverse=True)
+            selec_trim = st.selectbox("Seleccione un trimestre", trimestres)
+
+            filtrado = df[(df['ANO4'] == selec_anio) & (df['TRIMESTRE'] == selec_trim)]
+            if filtrado.empty:
+                st.warning(f"No hay datos para el año {selec_anio} y trimestre {selec_trim}.")
+                return
+
+            conteo = filtrado.groupby(['AGLOMERADO', 'material_piso']).size().reset_index(name='cantidad')
+            titulo = f"Distribución de materiales - Año {selec_anio}, Trimestre {selec_trim}"
+        
+        else:
+            # Si es "Todos", acumulamos conteos año por año
+            lista_conteos = []
+            for anio in anios:
+                datos_anio = df[df['ANO4'] == anio]
+                conteo_anio = datos_anio.groupby(['AGLOMERADO', 'material_piso']).size().reset_index(name='cantidad')
+                lista_conteos.append(conteo_anio)
+            conteo = pd.concat(lista_conteos).groupby(['AGLOMERADO', 'material_piso'])['cantidad'].sum().reset_index()
+            titulo = "Distribución de materiales - Todos los años"
+
+        conteo['AGLOMERADO'] = conteo['AGLOMERADO'].map(lambda x: aglo_dict().get(x, f"Aglomerado {x}"))
+        tabla = conteo.pivot(index='AGLOMERADO', columns='material_piso', values='cantidad').fillna(0)
+        
+        st.write(titulo)
+        st.dataframe(tabla)
+
+        fig, ax = plt.subplots(figsize=(12, 8))
+        tabla.plot.barh(ax=ax)
+        ax.set_title("Material predominante de piso por aglomerado")
+        ax.set_xlabel("Cantidad de viviendas")
+        plt.tight_layout()
+        st.pyplot(fig)
+
+    except FileNotFoundError:
+        st.error('No se encontró el archivo especificado.')
+    except Exception as e:
+        st.error(f"Error: {e}")
